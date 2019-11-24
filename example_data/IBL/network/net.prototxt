@@ -1,0 +1,235 @@
+name: "ShadingNet"
+
+### Load Data
+
+# Normal in camera space
+layer {
+	name: "input_normal"
+	type: "ImageData"
+	top: "data_normal_bgr"
+	top: "bla1"
+	image_data_param {
+		source: "normal.txt"
+		batch_size: 5
+
+	}
+}
+
+# Direction to camera in world space
+layer {
+	name: "input_camera"
+	type: "ImageData"
+	top: "data_camera_bgr"
+	top: "bla2"
+	image_data_param {
+		source: "camera.txt"
+		batch_size: 5
+	}
+}
+
+# Diffuse color in Phong reflection model
+layer {
+	name: "input_diffuse"
+	type: "ImageData"
+	top: "data_diffuse_bgr"
+	top: "bla3"
+	image_data_param {
+		source: "diffuse.txt"
+		batch_size: 5
+	}
+}
+
+# Specular color in Phong reflection model
+layer {
+	name: "input_specular"
+	type: "ImageData"
+	top: "data_specular_bgr"
+	top: "bla4"
+	image_data_param {
+		source: "specular.txt"
+		batch_size: 5
+	}
+}
+
+# Glossiness parameter, linear in log of glossiness paramter of the Phong reflection model
+layer {
+	name: "input_glossiness"
+	type: "ImageData"
+	top: "data_glossiness_bgr"
+	top: "bla5"
+	image_data_param {
+		source: "glossiness.txt"
+		batch_size: 5
+	}
+}
+
+layer {
+  name: "slicer_glossiness"
+  type: "Slice"
+  bottom: "data_glossiness_bgr"
+  top: "data_glossiness"
+  top: "bla6"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+
+# Ground truth shaded image
+layer {
+	name: "input_ground_truth"
+	type: "ImageData"
+	top: "data_ground_truth_bgr"
+	top: "bla7"
+	image_data_param {
+		source: "ground_truth.txt"
+		batch_size: 5
+	}
+}
+
+# Silence useless blobs
+layer {
+	name: "silence_layer1"
+	type: "Silence"
+	bottom: "bla1"
+}
+
+layer {
+	name: "silence_layer2"
+	type: "Silence"
+	bottom: "bla2"
+}
+
+layer {
+	name: "silence_layer3"
+	type: "Silence"
+	bottom: "bla3"
+}
+
+layer {
+	name: "silence_layer4"
+	type: "Silence"
+	bottom: "bla4"
+}
+
+layer {
+	name: "silence_layer5"
+	type: "Silence"
+	bottom: "bla5"
+}
+
+layer {
+	name: "silence_layer6"
+	type: "Silence"
+	bottom: "bla6"
+}
+
+layer {
+	name: "silence_layer7"
+	type: "Silence"
+	bottom: "bla7"
+}
+
+
+# Important: This defines the order of attributes
+
+layer {
+  name: "concat_input"
+  type: "Concat"
+  bottom: "data_normal_bgr"
+  bottom: "data_camera_bgr"
+  bottom: "data_diffuse_bgr"
+  bottom: "data_specular_bgr"
+  bottom: "data_glossiness"
+  top: "data_input"
+  concat_param {
+    concat_dim: 1
+  }
+}
+
+# Level 0, "Down"
+
+layer {
+	name: "conv1"
+	type: "Convolution"
+	bottom: "data_input"
+	top: "convoluted1"
+	convolution_param {
+		engine: CUDNN
+		num_output: 300
+		kernel_size: 1
+		stride: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+			value: 0
+		}
+	}
+}
+
+layer {
+	name: "rel0"
+	type: "ReLU"
+	bottom: "convoluted1"
+	top: "reld0"
+	relu_param{
+		negative_slope: 0.01
+		engine: CUDNN
+	}
+}
+
+# Level 0, "Up"
+
+layer {
+	name: "conv2"
+	type: "Convolution"
+	bottom: "reld0"
+	top: "convoluted2"
+	convolution_param {
+		engine: CUDNN
+		num_output: 3
+		group: 3
+		kernel_size: 1
+		stride: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+			value: 0
+		}
+	}
+}
+
+layer {
+	name: "rel1"
+	type: "ReLU"
+	bottom: "convoluted2"
+	top: "result"
+	relu_param{
+		negative_slope: 0.01
+		engine: CUDNN
+	}
+}
+
+####################################################
+## Compute Error
+####################################################
+
+## Compute loss
+
+layer {
+  name: "loss"
+  type: "SSIMLoss"
+  bottom: "result"
+  bottom: "data_ground_truth_bgr"
+  top: "final_loss"
+  ssim_loss_param{
+	kernel_size: 8
+	stride: 1
+	c1: 0.0001
+	c2: 0.001
+  }
+}

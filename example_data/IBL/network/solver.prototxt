@@ -1,0 +1,28 @@
+
+net: "net.prototxt"
+
+type: "AdaDelta"
+
+# Number of forward passes during testing
+test_iter: 1
+
+# Carry out testing every 1000 iterations
+test_interval: 1000
+
+# The base learning rate and momentum
+lr_policy: "fixed"
+base_lr: 1.0000 # The solver will change this
+momentum: 0.9
+
+# Train for 500k iterations
+max_iter: 500000
+
+# Display every 100 iterations
+display: 100
+
+# snapshot intermediate results
+snapshot: 5000
+snapshot_prefix: "snapshot"
+
+# solver mode: CPU or GPU
+solver_mode: CPU
