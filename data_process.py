@@ -1,6 +1,7 @@
 import OpenEXR
 import Imath
 import numpy as np
+import os.path
 
 def exr_loader(path, ndim=3):
     """
@@ -21,8 +22,11 @@ def exr_loader(path, ndim=3):
 
     if ndim == 1:
         # transform data to numpy
-        channel = np.fromstring(channel=pic.channel('R', pt), dtype=np.float32)
-        channel.shape = (size[1], size[0])  # Numpy arrays are (row, col)
+        try:
+            channel = np.fromstring(pic.channel('R', pt), dtype=np.float32)
+            channel.shape = (size[1], size[0])  # Numpy arrays are (row, col)
+        except Exception as e:
+            print(e)
         return np.array(channel)
     if ndim == 3:
         # read channels indivudally
@@ -37,24 +41,28 @@ def exr_loader(path, ndim=3):
         return np.array(allchannels).transpose((1, 2, 0))
 
 # load all images listed in one txt file in "dataset" folder
-def load_one_file(filename, dim):
+def load_one_file(filename, datapath, dim):
+    pwd = os.path.abspath(os.path.dirname(__file__))
+    datapath = os.path.join(pwd, datapath)
+    print(datapath)
     num_success = 0
     with open(filename) as f:
         images = []
         for line in f.readlines():
             path = line.split()[0]
             try:
-                images.append(exr_loader(path, ndim=dim))
+                images.append(exr_loader(os.path.join(datapath, path), ndim=dim))
                 num_success += 1
             except:
-                print("Fail loading " + path)
+                pass
+                #print("Fail loading " + path)
     print ("Successfully loaded " + str(num_success) + " images from " + filename)
     return np.array(images)
 
 # task = "AO", "GI",...
 # buffers = a list of "position", "normal", "groundtruth",...
 # return a dict of {"position" : np.array, ...}
-def load_train(task, buffers=None):
+def load_train(task, root = "./dataset/", buffers=None):
     result = {}
     dims_for_channel = {
         "glossiness": 1
@@ -64,25 +72,25 @@ def load_train(task, buffers=None):
         if buffers is None:
             buffers = ["position", "normal", "groundtruth"]
         for buffer_type in buffers:
-            path = "./dataset/training_" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + "training_" + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 1 if buffer_type == "groundtruth" else 3))
 
     elif task == "GI":
         if buffers is None:
             buffers = ["position", "normal", "light", "ground_truth"]
         for buffer_type in buffers:
-            path = "./dataset/training_" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + "training_" + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 3))
 
     elif task == "IBL":
         if buffers is None:
             buffers = ["camera", "normal", "diffuse", "ground_truth", "glossiness", "specular"]
         for buffer_type in buffers:
-            path = "./dataset/" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 3))
     return result
 
-def load_test(task, buffers=None):
+def load_test(task, root = "./dataset/", buffers=None):
     result = {}
     dims_for_channel = {
         "glossiness": 1
@@ -92,20 +100,20 @@ def load_test(task, buffers=None):
         if buffers is None:
             buffers = ["position", "normal", "groundtruth"]
         for buffer_type in buffers:
-            path = "./dataset/test_" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + "test_" + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 1 if buffer_type == "groundtruth" else 3))
 
     elif task == "GI":
         if buffers is None:
             buffers = ["position", "normal", "light", "groundtruth"]
         for buffer_type in buffers:
-            path = "./dataset/test_" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + "test_" + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 3))
 
     elif task == "IBL":
         if buffers is None:
             buffers = ["camera", "normal", "diffuse", "groundtruth", "glossiness", "specular"]
         for buffer_type in buffers:
-            path = "./dataset/test_" + buffer_type + ".txt"
-            result[buffer_type] = load_one_file(path, dims_for_channel.get(buffer_type, 3))
+            path = root + "test_" + buffer_type + ".txt"
+            result[buffer_type] = load_one_file(path, root, dims_for_channel.get(buffer_type, 3))
     return result
