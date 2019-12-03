@@ -17,6 +17,7 @@ class GIDataset(Dataset):
         for buffer_type in buffers:
             filepath = indexpath + split + "_" + buffer_type + ".txt"
             with open(filepath) as f:
+                n = 0
                 for line in f.readlines():
                     path = line.split()[0]
                     p = os.path.join(self.datapath, path)
@@ -62,22 +63,26 @@ class GIDataset(Dataset):
                         self.lights.append(p + ".pt")
                     else:
                         if savePt:
-                            arr = np.array(exr_loader(os.path.join(self.datapath, path), ndim=1))
-                            ts = torch.tensor(arr).unsqueeze(0)
+                            arr = np.array(exr_loader(os.path.join(self.datapath, path), ndim=3))
+                            ts = torch.tensor(arr).permute(2, 0, 1)
                             torch.save(ts, p + ".pt")
                         self.gts.append(p + ".pt")
                     n += 1
-                    if n%1000 == 0:
+                    if n%500 == 0:
                         print(buffer_type, n)
+                    if n > 2000:
+                        break
                     
     def __len__(self):
-        return len(self.positions)
+        return len(self.positions) * 3
 
     def __getitem__(self, idx):
-        pos = torch.load(self.positions[idx])
-        normal = torch.load(self.normals[idx])
-        light = torch.load(self.lights[idx])
-        gt = torch.load(self.gts[idx])
+        list_idx = idx // 3
+        rgb_idx = idx % 3
+        pos = torch.load(self.positions[list_idx])
+        normal = torch.load(self.normals[list_idx])
+        light = torch.load(self.lights[list_idx])[rgb_idx,:,:].unsqueeze(0)
+        gt = torch.load(self.gts[list_idx])[rgb_idx,:,:].unsqueeze(0)
 
         return pos, normal, light, gt
 
