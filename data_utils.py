@@ -12,7 +12,7 @@ class GIDataset(Dataset):
         self.normals = []
         self.lights = []
         self.gts = [] # groundtruths
-        buffers = ["position", "light", "normal", "groundtruth"]
+        buffers = ["position", "light", "normal", "ground_truth"]
         n = 0
         for buffer_type in buffers:
             filepath = indexpath + split + "_" + buffer_type + ".txt"
@@ -22,22 +22,26 @@ class GIDataset(Dataset):
                     p = os.path.join(self.datapath, path)
                     if not os.path.isfile(p):
                         continue
-                    # if not savePt:
-                    #     words = path.split('/')
-                    #     words[1] = 'Position'
-                    #     p1 = os.path.join(self.datapath, "/".join(words) + ".pt")
-                    #     words[1] = 'Normals'
-                    #     p2 = os.path.join(self.datapath, "/".join(words) + ".pt")
-                    #     words[1] = 'GroundTruth'
-                    #     p3 = os.path.join(self.datapath, "/".join(words) + ".pt")
-                    #     if os.path.isfile(p1) and  os.path.isfile(p2) and  os.path.isfile(p3):
-                    #         if buffer_type == "position":
-                    #             self.positions.append(p + ".pt")
-                    #         elif buffer_type == "normal":
-                    #             self.normals.append(p + ".pt")
-                    #         else:
-                    #             self.gts.append(p + ".pt")
-                    #     continue
+                    if not savePt:
+                        words = path.split('/')
+                        words[1] = 'Position'
+                        p1 = os.path.join(self.datapath, "/".join(words) + ".pt")
+                        words[1] = 'Normals'
+                        p2 = os.path.join(self.datapath, "/".join(words) + ".pt")
+                        words[1] = 'GroundTruth'
+                        p3 = os.path.join(self.datapath, "/".join(words) + ".pt")
+                        words[1] = 'Light'
+                        p4 = os.path.join(self.datapath, "/".join(words) + ".pt")
+                        if os.path.isfile(p1) and  os.path.isfile(p2) and  os.path.isfile(p3) and  os.path.isfile(p4):
+                            if buffer_type == "position":
+                                self.positions.append(p + ".pt")
+                            elif buffer_type == "normal":
+                                self.normals.append(p + ".pt")
+                            elif buffer_type == "light":
+                                self.lights.append(p + ".pt")
+                            else:
+                                self.gts.append(p + ".pt")
+                        continue
                     if buffer_type == "position":
                         if savePt:
                             arr = np.array(exr_loader(os.path.join(self.datapath, path), ndim=3))
